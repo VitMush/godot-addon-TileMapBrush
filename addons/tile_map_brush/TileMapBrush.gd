@@ -9,6 +9,7 @@ export (BrushType) var drawBrushType = BrushType.SQUARE
 export (int, 1, 1000) var eraseSize = 1
 export (BrushType) var eraseBrushType = BrushType.SQUARE
 
+export var RespectAutotiling: bool = false
 
 #Arrays hold Vector2, but it's easier to know when value is empty with arrays
 var drawWait : Array = []
@@ -57,7 +58,6 @@ func processDraw():
 			#save draw request for next frame
 			drawNext.push_back(pos)
 
-
 func drawBrush (pos : Vector2, cell : Dictionary, brushType, size : int):
 	match brushType:
 		BrushType.SQUARE:
@@ -76,7 +76,7 @@ func drawSquare (pos, cell : Dictionary, brushSize : float):
 	var bound = brushSize / 2
 	for x in range(pos.x - floor(bound), pos.x + round(bound)):
 		for y in range(pos.y - floor(bound), pos.y + round(bound)): 
-			set_cell(x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
+			setCell(x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
 
 
 func drawSquareRotated (pos, cell : Dictionary, brushSize : float):
@@ -93,7 +93,7 @@ func drawSquareRotated (pos, cell : Dictionary, brushSize : float):
 					and -1 == sign((bottomLeft.x - topLeft.x) * (y - topLeft.y) - (bottomLeft.y - topLeft.y) * (x - topLeft.x))
 					and -1 == sign((bottomRight.x - bottomLeft.x) * (y - bottomLeft.y) - (bottomRight.y - bottomLeft.y) * (x - bottomLeft.x))
 					and -1 == sign((topRight.x - bottomRight.x) * (y - bottomRight.y) - (topRight.y - bottomRight.y) * (x - bottomRight.x))):
-				set_cell(x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
+				setCell(x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
 
 
 func drawSquareRotatedOld (pos, cell : Dictionary, brushSize : float):
@@ -101,7 +101,7 @@ func drawSquareRotatedOld (pos, cell : Dictionary, brushSize : float):
 	for x in range(pos.x - bound, pos.x + bound):
 		for y in range(pos.y - bound, pos.y + bound):
 			if abs(x - pos.x) + abs(y - pos.y) <= brushSize / 2 + 2:
-				set_cell(x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
+				setCell(x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
 
 
 func drawCircle (pos, cell : Dictionary, brushSize : float):
@@ -109,18 +109,17 @@ func drawCircle (pos, cell : Dictionary, brushSize : float):
 	for x in range(pos.x - bound, pos.x + bound + 1):
 		for y in range(pos.y - bound, pos.y + bound + 1):
 			if sqrt((pow(x - pos.x, 2) as float) + (pow(y - pos.y, 2) as float)) <= brushSize / 2:
-				set_cell(x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
+				setCell(x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
 
 
 func drawLineH (pos, cell : Dictionary, brushSize):
 	for x in range(pos.x - (brushSize / 2), round(pos.x as float + (brushSize as float / 2))):
-		set_cell(x, pos.y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
+		setCell(x, pos.y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
 
 
 func drawLineV (pos, cell : Dictionary, brushSize):
 	for y in range(pos.y - (brushSize / 2), round(pos.y as float + (brushSize as float / 2))):
-		set_cell(pos.x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
-
+		setCell(pos.x, y, cell.tile, cell.flip_x, cell.flip_y, cell.transpose, cell.autotile_coord)
 
 func get_cell_info(pos : Vector2):
 	return {
@@ -131,7 +130,14 @@ func get_cell_info(pos : Vector2):
 		'autotile_coord' : get_cell_autotile_coord(pos.x, pos.y)
 	}
 
-
 func get_map_mouse_position():
 	#returns position on TileMap Grid
 	return world_to_map(get_viewport().get_mouse_position())
+
+#Calls regular set_cell method and immediatelly updates the bitmask area of the cell,
+# allowing for correct autotiling if set and Respect Autotiling is checked. 
+# dev note: Might impact performance notably if brush size > 100, at brush size 10 no performance notable on my setup
+func setCell(x: int, y: int, tile: int, flipx: bool, flipy: bool, transpose: bool, autotile_coord: Vector2):
+	set_cell(x, y, tile, flipx, flipy, transpose, autotile_coord)
+	if RespectAutotiling:
+		update_bitmask_area(Vector2(x,y))
