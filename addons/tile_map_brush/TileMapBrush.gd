@@ -54,7 +54,6 @@ func processDraw():
 		if get_cellv(pos) != -1:
 			#draw other tiles with same property TileMap drawn a tile
 			drawBrush(pos, get_cell_info(pos), drawBrushType, drawSize)
-			update_bitmask_area(pos)
 		else:
 			#save draw request for next frame
 			drawNext.push_back(pos)
